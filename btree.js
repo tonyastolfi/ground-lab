@@ -9,8 +9,12 @@ function array_upper_bound(a, x) {
     let i = 0;
     for (; i < a.length; ++i) {
         if (a[i].val > x) {
+            a[i].ats = ts_now;
             break;
         }
+    }
+    if (i > 0) {
+        a[i-1].ats = ts_now;
     }
     return i;
 }
@@ -23,17 +27,21 @@ function btree_insert(root, val) {
     if (result.split) {
         console.log(JSON.stringify(result));
         return {
-            elems: [{ val: result.split.min_val, ts: ts_now }],
+            elems: [{ val: result.split.min_val, mts: ts_now, ats: ts_now }],
             children: [root, result.split],
             min_val: root.min_val
         };
     }
 }
 
-function btree_find_pivots(nodes) {
+function btree_find_pivots(nodes, update_mts) {
     let elems = [];
     for (var i=1; i < nodes.length; ++i) {
-        elems.push({ val: nodes[i].min_val, ts: ts_now });
+        if (update_mts) {
+            elems.push({ val: nodes[i].min_val, mts: ts_now, ats: ts_now });
+        } else {
+            elems.push({ val: nodes[i].min_val, mts: 0, ats: ts_now });
+        }
     }
     return elems;
 }
@@ -49,9 +57,9 @@ function btree_node_size(node) {
 function btree_node_split(node) {
     if (node.children) {
         let split_children = node.children.splice(node.children.length / 2);
-        let split_elems = btree_find_pivots(split_children);
+        let split_elems = btree_find_pivots(split_children, true);
 
-        node.elems = btree_find_pivots(node.children);
+        node.elems = btree_find_pivots(node.children, true);
         return {
             elems: split_elems,
             children: split_children,
@@ -59,6 +67,10 @@ function btree_node_split(node) {
         };
     } else {
         let split_pos = Math.floor(node.elems.length / 2);
+        for (var i=0; i<node.elems.length; ++i) {
+            node.elems[i].ats = ts_now;
+            node.elems[i].mts = ts_now;
+        }
         let split_min = node.elems[split_pos].val;
         return {
             elems: node.elems.splice(split_pos),
@@ -98,13 +110,19 @@ function btree_node_insert(node, val) {
             console.log(JSON.stringify(result));
             node.children.push(result.split);
             node.children.sort(compare_child);
-            node.elems = btree_find_pivots(node.children);
+            node.elems = btree_find_pivots(node.children, false);
+            for (var i=0; i<node.elems.length; ++i) {
+                if (node.elems[i].val === result.split.min_val) {
+                    node.elems[i].mts = ts_now;
+                    break;
+                }
+            }
         }
         if (!node.min_val || node.min_val > node.children[0].min_val) {
             node.min_val = node.children[0].min_val;
         }
     } else {
-        node.elems.push({ val: val, ts: ts_now });
+        node.elems.push({ val: val, mts: ts_now, ats: ts_now });
         node.elems.sort(compare_elem);
         node.min_val = node.elems[0].val;
     }

@@ -43,7 +43,7 @@ function measureNodeAsBtree(node) {
     }
 }
 
-let colorFadeSpeed = 8;
+let colorFadeSpeed = 3;
 
 function drawNodeAsBtree(x, y, node, leaf_x) {
     ctx.font = node_font;
@@ -71,10 +71,11 @@ function drawNodeAsBtree(x, y, node, leaf_x) {
             if (i < node.elems.length) {
                 let val = node.elems[i].val;
                 let m = ctx.measureText(val.toString());
-                let ts = node.elems[i].ts;
+                let mts = node.elems[i].mts;
+                let ats = node.elems[i].ats;
                 let fillColor = "rgb("
-                    + Math.min(255, (ts_now - ts) * colorFadeSpeed).toString() + ", "
-                    + Math.min(255, (ts_now - ts) * colorFadeSpeed).toString() + ", "
+                    + Math.min(255, (ts_now - ats) * colorFadeSpeed).toString() + ", "
+                    + Math.min(255, (ts_now - mts) * colorFadeSpeed).toString() + ", "
                     + "255)";
                 ctx.fillStyle = fillColor;
                 ctx.strokeStyle = "black";
@@ -93,10 +94,11 @@ function drawNodeAsBtree(x, y, node, leaf_x) {
         for (var i=0; i<node.elems.length; ++i) {
             let val = node.elems[i].val;
             let m = ctx.measureText(val.toString());
-            let ts = node.elems[i].ts;
+            let mts = node.elems[i].mts;
+            let ats = node.elems[i].ats;
             let fillColor = "rgb("
-                + Math.min(255, (ts_now - ts) * colorFadeSpeed).toString() + ", "
-                + Math.min(255, (ts_now - ts) * colorFadeSpeed).toString() + ", "
+                + Math.min(255, (ts_now - ats) * colorFadeSpeed).toString() + ", "
+                + Math.min(255, (ts_now - mts) * colorFadeSpeed).toString() + ", "
                 + "255)";
             ctx.fillStyle = fillColor;
             ctx.strokeStyle = "black";
