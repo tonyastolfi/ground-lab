@@ -17,152 +17,9 @@
   <!--<script src="js/scripts.js"></script>-->
   <canvas id="canvas" width="2250px" height="1500px" style="width: 100%; height: 100%;"></canvas>
   <script src="render.js"></script>
+  <script src="btree.js"></script>
+  <script src="red_black.js"></script>
   <script>
-
-    let naa = {
-        elems: ["aaa", "aab"],
-    };
-    let nab = {
-        elems: ["aba", "abb", "abc"],
-    };
-    let nac = {
-        elems: ["aca", "acb"],
-    };
-    let nad = {
-        elems: ["ada", "adb"],
-    };
-    
-    let na = {
-        elems: ["aa", "ab", "ac"],
-        children: [naa, nab, nac, nad],
-    };
-    let nb = {
-        elems: ["ba", "bb", "bc"],
-    };
-    let nc = {
-        elems: ["ca", "cb", "cc"],
-    };
-    
-    let n0 = {
-        elems: ["b", "c"],
-        children: [na, nb, nc]
-    };
-
-    let B_min = 2;
-    let B_max = 4;
-    
-    function btree_new() {
-        return { elems: [] };
-    }
-
-    function array_upper_bound(a, x) {
-        let i = 0;
-        for (; i < a.length; ++i) {
-            if (a[i] > x) {
-                break;
-            }
-        }
-        return i;
-    }
-
-    function btree_insert(root, val) {
-        let result = btree_node_insert(root, val);
-        if (result.done) {
-            return root;
-        }
-        if (result.split) {
-            console.log(JSON.stringify(result));
-            return {
-                elems: [result.split.min_val],
-                children: [root, result.split],
-                min_val: root.min_val
-            };
-        }
-    }
-
-    function btree_find_pivots(nodes) {
-        let elems = [];
-        for (var i=1; i < nodes.length; ++i) {
-            elems.push(nodes[i].min_val);
-        }
-        return elems;
-    }
-
-    function btree_node_size(node) {
-        return node.elems.length + 1;/*
-        if (node.children) {
-            return (node.children.length + node.elems.length + 1) / 2;
-        }
-        return (node.elems.length + 1) / 2;*/
-    }
-
-    function btree_node_split(node) {
-        if (node.children) {
-            let split_children = node.children.splice(node.children.length / 2);
-            let split_elems = btree_find_pivots(split_children);
-
-            node.elems = btree_find_pivots(node.children);
-            return {
-                elems: split_elems,
-                children: split_children,
-                min_val: split_children[0].min_val
-            };
-        } else {
-            let split_pos = Math.floor(node.elems.length / 2);
-            let split_min = node.elems[split_pos];
-            return {
-                elems: node.elems.splice(split_pos),
-                min_val: split_min,
-            };
-        }
-    }
-
-    let compare_fn = function(a, b) {
-        if (a.min_val < b.min_val) {
-            return -1;
-        }
-        if (a.min_val > b.min_val) {
-            return 1;
-        }
-        return 0;
-    };
-    
-    function btree_node_insert(node, val) {
-        console.assert(!node.children || node.elems.length + 1 === node.children.length);
-
-        if (node.children) {
-            let pivot = array_upper_bound(node.elems, val);
-            let last = pivot === node.elems.length;
-            let result = btree_node_insert(node.children[pivot], val);
-            if (result.split) {
-                console.log(JSON.stringify(result));
-                node.children.push(result.split);
-                node.children.sort(compare_fn);
-                node.elems = btree_find_pivots(node.children);
-            }
-            if (!node.min_val || node.min_val > node.children[0].min_val) {
-                node.min_val = node.children[0].min_val;
-            }
-        } else {
-            node.elems.push(val);
-            node.elems.sort(compare_fn);
-            node.min_val = node.elems[0];
-        }
-
-        if (btree_node_size(node) > B_max) {
-            return { split: btree_node_split(node) };
-        }
-        return { done: true };
-    }
-
-    let b = btree_new();
-    let val = 0;
-
-    function step() {
-        b = btree_insert(b, ++val);
-        drawScene(b, btree_to_red_black(b));
-        console.log(JSON.stringify(b));
-    }
 
     function assert(cond, msg) {
         if (!cond) {
@@ -170,102 +27,61 @@
         }
     }
 
-    function black_new(left, right) {
-        let cached_black_height = 1;
-        let cached_size = 1;
-        if (left) {
-            cached_size += left.cached_size;
-            cached_black_height = 1 + left.cached_black_height;
-            if (right) {
-                console.assert(left.cached_black_height === right.cached_black_height, JSON.stringify({left: left, right: right}));
-            }
-        }
-        if (right) {
-            cached_size += right.cached_size;
-            cached_black_height = 1 + right.cached_black_height;
-        }
-        return {
-            black: true,
-            left: left,
-            right: right,
-            cached_size: cached_size,
-            cached_black_height: cached_black_height,
-        };
-    }
+    let showRB = false;
 
-    function red_new(left, right) {
-        let cached_black_height = 0;
-        let cached_size = 1;
-        if (left) {
-            cached_size += left.cached_size;
-            cached_black_height = left.cached_black_height;
-            if (right) {
-                console.assert(left.cached_black_height === right.cached_black_height, JSON.stringify({left: left, right: right}));
-            }
-        }
-        if (right) {
-            cached_size += right.cached_size;
-            cached_black_height = right.cached_black_height;
-        }
-        return {
-            black: false,
-            left: left,
-            right: right,
-            cached_size: cached_size,
-            cached_black_height: cached_black_height,
-        };
-    }
-
-    function btree_to_red_black(root) {
-        if (root.children) {
-            if (root.children.length == 2) {
-                return black_new(
-                    btree_to_red_black(root.children[0]),
-                    btree_to_red_black(root.children[1])
-                );
-            } else if (root.children.length == 3) {
-                return black_new(
-                    red_new(
-                        btree_to_red_black(root.children[0]),
-                        btree_to_red_black(root.children[1])
-                    ),
-                    btree_to_red_black(root.children[2])
-                );                
-            } else if (root.children.length == 4) {
-                return black_new(
-                    red_new(
-                        btree_to_red_black(root.children[0]),
-                        btree_to_red_black(root.children[1])
-                    ),
-                    red_new(
-                        btree_to_red_black(root.children[2]),
-                        btree_to_red_black(root.children[3])
-                    )
-                );
-            }
+    let ts_now = 09;
+    let b = btree_new();
+    let val = 0;
+    let history = [];
+    let future = [];
+    
+    function redraw() {
+        if (showRB) {
+            drawScene(b, btree_to_red_black(b));
         } else {
-            if (root.elems.length == 0) {
-                return null;
-            } else if (root.elems.length == 1) {
-                return black_new(null, null);
-            } else if (root.elems.length == 2) {
-                return black_new(
-                    red_new(null, null),
-                    null
-                );
-            } else if (root.elems.length == 3) {
-                return black_new(
-                    red_new(null, null),
-                    red_new(null, null)
-                );
-            }
-            throw new Error();
+            drawScene(b, null);
+        }
+    }
+
+    function revert_last() {
+        if (history.length > 0) {
+            let x = JSON.parse(history.pop());
+            b = x.b;
+            future.push(x.val);
         }
     }
     
-    drawScene(b, btree_to_red_black(b));
+    function insert_random() {
+        let val = Math.floor(Math.random() * 100);
+        if (future.length > 0) {
+            val = future.pop();
+        }
+        history.push(JSON.stringify({val: val, b: b}));
+        b = btree_insert(b, val);
+        console.log(JSON.stringify(b));
+    }
+
+    window.setInterval(function() {
+        ts_now += 1;
+        redraw();
+    }, 1000 / 50);
         
-    $(window).click(step);
+    $(window).click(insert_random);
+    $(window).keyup(function (e) {
+        if (e.which == 192) {
+            revert_last();
+        }
+    });
+    $(window).keydown(function (e) {
+        if (e.which == 16) {
+            showRB = true;
+        }
+    });
+    $(window).keyup(function (e) {
+        if (e.which == 16) {
+            showRB = false;
+        }
+    });
   </script>
 </body>
 </html>

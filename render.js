@@ -15,14 +15,14 @@ function measureNodeAsBtree(node) {
     if (node.children) {
         for (var i=0; i<node.children.length; ++i) {
             if (i < node.elems.length) {
-                let m = ctx.measureText(node.elems[i].toString());
+                let m = ctx.measureText(node.elems[i].val.toString());
                 w += m.width;
             }
             w += node_padding_px * 2;
         }
     } else {
         for (var i=0; i<node.elems.length; ++i) {
-            let m = ctx.measureText(node.elems[i].toString());
+            let m = ctx.measureText(node.elems[i].val.toString());
             w += m.width + node_padding_px * 2;
         }
     }
@@ -43,11 +43,12 @@ function measureNodeAsBtree(node) {
     }
 }
 
+let colorFadeSpeed = 8;
+
 function drawNodeAsBtree(x, y, node, leaf_x) {
     ctx.font = node_font;
     
     let node_m = measureNodeAsBtree(node);
-    let elems = node.elems;
         
     if (node.children) {
         let elem_x = x - node_m.w / 2;
@@ -68,13 +69,19 @@ function drawNodeAsBtree(x, y, node, leaf_x) {
             elem_x += node_padding_px * 2;
 
             if (i < node.elems.length) {
-                let m = ctx.measureText(elems[i].toString());
-                ctx.fillStyle = "white";
+                let val = node.elems[i].val;
+                let m = ctx.measureText(val.toString());
+                let ts = node.elems[i].ts;
+                let fillColor = "rgb("
+                    + Math.min(255, (ts_now - ts) * colorFadeSpeed).toString() + ", "
+                    + Math.min(255, (ts_now - ts) * colorFadeSpeed).toString() + ", "
+                    + "255)";
+                ctx.fillStyle = fillColor;
                 ctx.strokeStyle = "black";
                 ctx.fillRect(elem_x, y, m.width + node_padding_px * 2, node_m.h);
                 ctx.strokeRect(elem_x, y, m.width + node_padding_px * 2, node_m.h);
                 ctx.fillStyle = "black";
-                ctx.fillText(elems[i].toString(), elem_x + node_padding_px, y + node_height_px - node_padding_px);
+                ctx.fillText(val.toString(), elem_x + node_padding_px, y + node_height_px - node_padding_px);
                 leaf_x.push(elem_x + node_padding_px + m.width / 2);
                 elem_x += m.width + node_padding_px * 2;
             }
@@ -83,69 +90,84 @@ function drawNodeAsBtree(x, y, node, leaf_x) {
         }
     } else {
         let elem_x = x - node_m.w / 2;
-        for (var i=0; i<elems.length; ++i) {
-            let m = ctx.measureText(elems[i].toString());
-            ctx.fillStyle = "white";
+        for (var i=0; i<node.elems.length; ++i) {
+            let val = node.elems[i].val;
+            let m = ctx.measureText(val.toString());
+            let ts = node.elems[i].ts;
+            let fillColor = "rgb("
+                + Math.min(255, (ts_now - ts) * colorFadeSpeed).toString() + ", "
+                + Math.min(255, (ts_now - ts) * colorFadeSpeed).toString() + ", "
+                + "255)";
+            ctx.fillStyle = fillColor;
             ctx.strokeStyle = "black";
             ctx.fillRect(elem_x, y, m.width + node_padding_px * 2, node_m.h);
             ctx.strokeRect(elem_x, y, m.width + node_padding_px * 2, node_m.h);
             ctx.fillStyle = "black";
-            ctx.fillText(elems[i].toString(), elem_x + node_padding_px, y + node_height_px - node_padding_px);
+            ctx.fillText(val.toString(), elem_x + node_padding_px, y + node_height_px - node_padding_px);
             leaf_x.push(elem_x + node_padding_px + m.width / 2);
             elem_x += m.width + node_padding_px * 2;
         }
     }
 }
 
-function measureNodeAsRedBlack(x, y, node) {
-}
-
-function drawRedBlackNode(leaf_x, y, node, parent) {
+function drawRedBlackNode(leaf_x, y, node, parent, depth) {
     if (!node) {
         return 0;
     }
 
+    let level_height_px = level_margin_px + node_height_px;
+    
+    function getChildY(child) {
+        let child_y = y;
+        if (child.black && node.black) {
+            child_y += level_height_px;
+        } else if (!child.black) {
+            child_y += level_height_px / 4;
+        } else {
+            child_y += level_height_px * 3 / 4;
+        }
+        return child_y;
+    }
+    
     let left_x = 0;
+    let left_y = 0;
     if (node.left) {
-        left_x = drawRedBlackNode(leaf_x, y + level_margin_px / 2, node.left, node);
+        left_y = getChildY(node.left);
+        left_x = drawRedBlackNode(leaf_x, left_y, node.left, node);
     }
     
     let x = leaf_x.shift();
 
     ctx.strokeStyle = "black";
 
-    if (node.left) {
+    function drawChild(child, child_x, child_y) {
+        let saveAlpha = ctx.globalAlpha;
+        ctx.globalAlpha = 0.5;    
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(left_x, y + level_margin_px / 2);
+        ctx.lineTo(child_x, child_y);
         ctx.stroke();
+        ctx.globalAlpha = saveAlpha;
 
-        if (node.left.black) {
+        if (child.black) {
             ctx.fillStyle = "black";
         } else {
             ctx.fillStyle = "red";        
         }
+        
         ctx.beginPath();
-        ctx.ellipse(left_x, y + level_margin_px / 2, 12, 12, 0, 0, 2 * Math.PI);
+        ctx.ellipse(child_x, child_y, 12, 12, 0, 0, 2 * Math.PI);
         ctx.fill();
+    }
+    
+    if (node.left) {
+        drawChild(node.left, left_x, left_y);
     }
 
     if (node.right) {
-        let right_x = drawRedBlackNode(leaf_x, y + level_margin_px / 2, node.right, node);
-        
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(right_x, y + level_margin_px / 2);
-        ctx.stroke();
-
-        if (node.right.black) {
-            ctx.fillStyle = "black";
-        } else {
-            ctx.fillStyle = "red";        
-        }
-        ctx.beginPath();
-        ctx.ellipse(right_x, y + level_margin_px / 2, 12, 12, 0, 0, 2 * Math.PI);
-        ctx.fill();
+        let right_y = getChildY(node.right);
+        let right_x = drawRedBlackNode(leaf_x, right_y, node.right, node);
+        drawChild(node.right, right_x, right_y);
     }
 
     if (!parent) {
@@ -165,6 +187,7 @@ function drawRedBlackNode(leaf_x, y, node, parent) {
 let drawNode = drawNodeAsBtree;
 
 function drawScene(root, rb_root) {
+    ctx.globalAlpha = 1.0;    
     let grd = ctx.createRadialGradient(
         canvas.width / 2, canvas.height / 2, 100, 
         canvas.width / 2, canvas.height / 2, 1000
@@ -177,6 +200,8 @@ function drawScene(root, rb_root) {
 
     let leaf_x = [];
     drawNode(canvas.width / 2, 150, root, leaf_x);
-
-    drawRedBlackNode(leaf_x, 600, rb_root, null);
+    
+    if (rb_root) {
+        drawRedBlackNode(leaf_x, 150 + 48, rb_root, null, 0);
+    }
 }
